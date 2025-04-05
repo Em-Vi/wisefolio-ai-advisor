@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,6 +62,37 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				// Custom colors for our app
+				'finance-blue': {
+					50: '#F0F7FF',
+					100: '#E0EFFF',
+					200: '#B9DCFF',
+					300: '#8CC5FF',
+					400: '#5AA6FF',
+					500: '#3E92CC',
+					600: '#2563EB',
+					700: '#1D4ED8',
+					800: '#0A2463',
+					900: '#081c4a',
+				},
+				'finance-green': {
+					50: '#F0FDF4',
+					100: '#DCFCE7',
+					200: '#BBF7D0',
+					300: '#86EFAC',
+					400: '#44CF6C',
+					500: '#22C55E',
+					600: '#16A34A',
+					700: '#15803D',
+					800: '#166534',
+					900: '#14532D',
+				},
+				chart: {
+					'positive': '#44CF6C',
+					'negative': '#EF4444',
+					'neutral': '#3E92CC',
+					'grid': '#E5E7EB',
 				}
 			},
 			borderRadius: {
@@ -84,11 +116,20 @@ export default {
 					to: {
 						height: '0'
 					}
+				},
+				'pulse-subtle': {
+					'0%, 100%': {
+						opacity: '1'
+					},
+					'50%': {
+						opacity: '0.8'
+					}
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'pulse-subtle': 'pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite'
 			}
 		}
 	},
