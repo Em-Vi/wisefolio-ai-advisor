@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { toast } from '@/components/ui/sonner';
+import { toast } from '@/lib/toast';
 import { generateMockChartData, generateStockRecommendations, popularStocks } from '@/data/mockStockData';
 import { formatCurrency } from '@/lib/formatUtils';
 import { Search, TrendingUp, BarChartHorizontal, Award, AlertTriangle } from 'lucide-react';
