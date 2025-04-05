@@ -1,4 +1,3 @@
-
 export interface StockData {
   symbol: string;
   name: string;
@@ -284,16 +283,16 @@ export const mockJournalEntries: JournalEntry[] = [
     content: 'I believe tech stocks will continue to outperform in the next quarter due to strong earnings and AI innovation. Planning to increase my position in AAPL and MSFT.',
     stocks: ['AAPL', 'MSFT', 'NVDA'],
     sentiment: 'bullish',
-    aiFeedback: 'Your analysis shows confidence in tech sector growth, which aligns with current market trends. Consider diversifying beyond just mega-cap tech to reduce concentration risk. Your optimism about AI's impact is well-founded, but be mindful of potential regulatory headwinds in this space.',
+    aiFeedback: "Your analysis shows confidence in tech sector growth, which aligns with current market trends. Consider diversifying beyond just mega-cap tech to reduce concentration risk. Your optimism about AI's impact is well-founded, but be mindful of potential regulatory headwinds in this space.",
   },
   {
     id: '2',
     date: new Date(Date.now() - 86400000 * 5).toISOString(),
     title: 'Electric Vehicle Market Concerns',
-    content: 'TSLA's recent price drops may indicate weakening demand. I'm considering reducing my position and reallocating to established automakers with stronger EV roadmaps.',
+    content: "TSLA's recent price drops may indicate weakening demand. I'm considering reducing my position and reallocating to established automakers with stronger EV roadmaps.",
     stocks: ['TSLA', 'F', 'GM'],
     sentiment: 'bearish',
-    aiFeedback: 'You've identified a legitimate concern about Tesla's pricing strategy, which could impact margins. Your consideration of established automakers shows contrarian thinking, which can be valuable. Be aware of confirmation bias - ensure you're not focusing only on negative Tesla news to justify a decision you've already made.',
+    aiFeedback: "You've identified a legitimate concern about Tesla's pricing strategy, which could impact margins. Your consideration of established automakers shows contrarian thinking, which can be valuable. Be aware of confirmation bias - ensure you're not focusing only on negative Tesla news to justify a decision you've already made.",
   }
 ];
 
