@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
+import { useAuth } from '@/hooks/useAuth';
 
 export interface JournalEntry {
   id: string;
@@ -12,6 +13,7 @@ export interface JournalEntry {
   created_at: string;
   updated_at: string;
   ai_feedback: string | null;
+  user_id: string;
 }
 
 interface CreateJournalEntryPayload {
@@ -23,8 +25,11 @@ interface CreateJournalEntryPayload {
 
 export const useJournalEntries = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const fetchJournalEntries = async (): Promise<JournalEntry[]> => {
+    if (!user) throw new Error("User must be authenticated");
+    
     const { data, error } = await supabase
       .from('journal_entries')
       .select('*')
@@ -35,13 +40,15 @@ export const useJournalEntries = () => {
       throw error;
     }
 
-    return data;
+    return data as JournalEntry[];
   };
 
   const createJournalEntry = async (entry: CreateJournalEntryPayload): Promise<JournalEntry> => {
+    if (!user) throw new Error("User must be authenticated");
+    
     const { data, error } = await supabase
       .from('journal_entries')
-      .insert([entry])
+      .insert([{ ...entry, user_id: user.id }])
       .select()
       .single();
 
@@ -51,13 +58,15 @@ export const useJournalEntries = () => {
     }
 
     toast.success('Journal entry created successfully');
-    return data;
+    return data as JournalEntry;
   };
 
   const updateJournalEntry = async (
     id: string, 
     updates: Partial<CreateJournalEntryPayload>
   ): Promise<JournalEntry> => {
+    if (!user) throw new Error("User must be authenticated");
+    
     const { data, error } = await supabase
       .from('journal_entries')
       .update(updates)
@@ -71,10 +80,12 @@ export const useJournalEntries = () => {
     }
 
     toast.success('Journal entry updated successfully');
-    return data;
+    return data as JournalEntry;
   };
 
   const deleteJournalEntry = async (id: string): Promise<void> => {
+    if (!user) throw new Error("User must be authenticated");
+    
     const { error } = await supabase
       .from('journal_entries')
       .delete()
@@ -91,6 +102,7 @@ export const useJournalEntries = () => {
   const entriesQuery = useQuery({
     queryKey: ['journalEntries'],
     queryFn: fetchJournalEntries,
+    enabled: !!user,
   });
 
   const createMutation = useMutation({

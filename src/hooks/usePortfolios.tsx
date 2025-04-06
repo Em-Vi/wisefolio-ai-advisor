@@ -2,6 +2,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
+import { useAuth } from '@/hooks/useAuth';
 
 export interface Portfolio {
   id: string;
@@ -9,6 +10,7 @@ export interface Portfolio {
   description: string | null;
   created_at: string;
   updated_at: string;
+  user_id: string;
 }
 
 export interface PortfolioStock {
@@ -37,8 +39,11 @@ interface CreatePortfolioStockPayload {
 
 export const usePortfolios = () => {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const fetchPortfolios = async (): Promise<Portfolio[]> => {
+    if (!user) throw new Error("User must be authenticated");
+    
     const { data, error } = await supabase
       .from('portfolios')
       .select('*')
@@ -53,6 +58,8 @@ export const usePortfolios = () => {
   };
 
   const fetchPortfolioStocks = async (portfolioId: string): Promise<PortfolioStock[]> => {
+    if (!user) throw new Error("User must be authenticated");
+    
     const { data, error } = await supabase
       .from('portfolio_stocks')
       .select('*')
@@ -68,9 +75,11 @@ export const usePortfolios = () => {
   };
 
   const createPortfolio = async (portfolio: CreatePortfolioPayload): Promise<Portfolio> => {
+    if (!user) throw new Error("User must be authenticated");
+    
     const { data, error } = await supabase
       .from('portfolios')
-      .insert([portfolio])
+      .insert([{ ...portfolio, user_id: user.id }])
       .select()
       .single();
 
@@ -84,6 +93,8 @@ export const usePortfolios = () => {
   };
 
   const addStock = async (stock: CreatePortfolioStockPayload): Promise<PortfolioStock> => {
+    if (!user) throw new Error("User must be authenticated");
+    
     const { data, error } = await supabase
       .from('portfolio_stocks')
       .insert([stock])
@@ -103,6 +114,8 @@ export const usePortfolios = () => {
     id: string, 
     updates: Partial<Omit<CreatePortfolioStockPayload, 'portfolio_id'>>
   ): Promise<PortfolioStock> => {
+    if (!user) throw new Error("User must be authenticated");
+    
     const { data, error } = await supabase
       .from('portfolio_stocks')
       .update(updates)
@@ -120,6 +133,8 @@ export const usePortfolios = () => {
   };
 
   const removeStock = async (id: string): Promise<void> => {
+    if (!user) throw new Error("User must be authenticated");
+    
     const { error } = await supabase
       .from('portfolio_stocks')
       .delete()
@@ -136,12 +151,13 @@ export const usePortfolios = () => {
   const portfoliosQuery = useQuery({
     queryKey: ['portfolios'],
     queryFn: fetchPortfolios,
+    enabled: !!user,
   });
 
   const getPortfolioStocksQuery = (portfolioId: string) => useQuery({
     queryKey: ['portfolioStocks', portfolioId],
     queryFn: () => fetchPortfolioStocks(portfolioId),
-    enabled: !!portfolioId,
+    enabled: !!portfolioId && !!user,
   });
 
   const createPortfolioMutation = useMutation({
