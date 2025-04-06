@@ -1,10 +1,36 @@
 
 import React from 'react';
 import { Outlet } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import { AppSidebar } from './AppSidebar';
+import { ProfileButton } from '../auth/ProfileButton';
 import { SidebarTrigger } from '@/components/ui/sidebar';
 
 export function WiseAppLayout() {
+  const { user } = useAuth();
+  
+  // Generate user initials from their email or full name
+  const getUserInitials = () => {
+    if (!user) return 'U';
+    
+    const email = user.email || '';
+    const fullName = user.user_metadata?.full_name || '';
+    
+    if (fullName) {
+      const nameParts = fullName.split(' ');
+      if (nameParts.length >= 2) {
+        return `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase();
+      }
+      return fullName[0].toUpperCase();
+    }
+    
+    if (email) {
+      return email[0].toUpperCase();
+    }
+    
+    return 'U';
+  };
+  
   return (
     <div className="min-h-screen flex w-full">
       <AppSidebar />
@@ -21,9 +47,7 @@ export function WiseAppLayout() {
                   <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
                 </svg>
               </button>
-              <div className="rounded-full w-8 h-8 bg-finance-blue-600 text-white flex items-center justify-center">
-                <span className="font-medium text-sm">JD</span>
-              </div>
+              <ProfileButton user={user} initials={getUserInitials()} />
             </div>
           </div>
         </header>
