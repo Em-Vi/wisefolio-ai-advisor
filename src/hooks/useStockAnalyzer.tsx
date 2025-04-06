@@ -11,7 +11,6 @@ interface StockAnalyzerRequest {
 
 export const useStockAnalyzer = () => {
   return useMutation({
-    queryKey: ['stockAnalyzer'],
     mutationFn: async ({ symbols, riskLevel, investmentAmount }: StockAnalyzerRequest) => {
       try {
         const { data, error } = await supabase.functions.invoke('stock-analyzer', {

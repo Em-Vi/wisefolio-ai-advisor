@@ -21,7 +21,6 @@ interface FinancialAdvisorResponse {
 
 export const useFinancialAdvisor = () => {
   return useMutation({
-    queryKey: ['financialAdvisor'],
     mutationFn: async ({ query, userContext = {} }: FinancialAdvisorRequest): Promise<FinancialAdvisorResponse> => {
       try {
         const { data, error } = await supabase.functions.invoke('financial-advisor', {
