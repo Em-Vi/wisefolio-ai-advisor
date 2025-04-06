@@ -25,7 +25,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <AuthProvider>
-        <SidebarProvider>
+        <SidebarProvider defaultOpen={false}>
           <BrowserRouter>
             <Routes>
               <Route path="/auth" element={<Auth />} />
