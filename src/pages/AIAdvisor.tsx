@@ -4,16 +4,10 @@ import { AIChatMessage, ChatMessage } from '@/components/ai/AIChatMessage';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { SendHorizontal, Bot, User } from 'lucide-react';
-
-// Sample AI responses for demo purposes
-const aiResponses = [
-  "Based on your investment goals and risk tolerance, I recommend diversifying your portfolio with a mix of growth stocks and dividend-paying companies. A 60/40 split between equities and bonds would be appropriate for your moderate risk profile.",
-  "Looking at the current market conditions, technology and healthcare sectors show strong growth potential for the next quarter. Consider allocating 20-25% of your portfolio to these sectors.",
-  "The recent volatility in the market suggests a cautious approach. You might want to consider dollar-cost averaging into your positions rather than investing a lump sum all at once.",
-  "When investing in individual stocks, it's important to assess their financial health. Look for companies with strong balance sheets, consistent revenue growth, and manageable debt levels.",
-  "For retirement planning, a good rule of thumb is to save at least 15% of your pre-tax income annually. Given your time horizon of 25 years until retirement, a growth-oriented strategy would be appropriate, gradually shifting to more conservative investments as you approach retirement age."
-];
+import { SendHorizontal, Bot, User, Loader2 } from 'lucide-react';
+import { useFinancialAdvisor } from '@/hooks/useFinancialAdvisor';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 const AIAdvisor = () => {
   const [input, setInput] = useState('');
@@ -25,8 +19,13 @@ const AIAdvisor = () => {
       timestamp: new Date()
     }
   ]);
-  const [loading, setLoading] = useState(false);
+  
+  // User context for personalized advice
+  const [riskTolerance, setRiskTolerance] = useState<'low' | 'medium' | 'high'>('medium');
+  const [investmentHorizon, setInvestmentHorizon] = useState<'short' | 'medium' | 'long'>('medium');
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { mutateAsync: getAIResponse, isPending } = useFinancialAdvisor();
   
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -36,10 +35,10 @@ const AIAdvisor = () => {
     scrollToBottom();
   }, [messages]);
   
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!input.trim()) return;
+    if (!input.trim() || isPending) return;
     
     // Add user message
     const userMessage: ChatMessage = {
@@ -51,23 +50,34 @@ const AIAdvisor = () => {
     
     setMessages(prev => [...prev, userMessage]);
     setInput('');
-    setLoading(true);
     
-    // Simulate AI response delay
-    setTimeout(() => {
-      // Get random AI response for demo
-      const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)];
+    try {
+      // User context to personalize responses
+      const userContext = {
+        riskTolerance,
+        investmentHorizon,
+        investmentGoals: ['Growth', 'Income', 'Preservation'],
+        portfolioSize: 25000,
+      };
+      
+      // Get AI response
+      const response = await getAIResponse({ 
+        query: input,
+        userContext
+      });
       
       const aiMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        content: randomResponse,
+        content: response.response,
         sender: 'ai',
         timestamp: new Date()
       };
       
       setMessages(prev => [...prev, aiMessage]);
-      setLoading(false);
-    }, 1000);
+    } catch (error) {
+      // Error already handled by the hook with toast
+      console.error('Error getting AI response:', error);
+    }
   };
   
   return (
@@ -96,11 +106,11 @@ const AIAdvisor = () => {
                   placeholder="Ask about investments, market trends, or financial planning..." 
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  disabled={loading}
+                  disabled={isPending}
                   className="flex-1"
                 />
-                <Button type="submit" disabled={loading || !input.trim()}>
-                  <SendHorizontal size={18} />
+                <Button type="submit" disabled={isPending || !input.trim()}>
+                  {isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <SendHorizontal size={18} />}
                   <span className="sr-only">Send</span>
                 </Button>
               </form>
@@ -109,6 +119,43 @@ const AIAdvisor = () => {
         </div>
         
         <div>
+          <Card className="mb-4">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg">Your Profile</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="risk-tolerance">Risk Tolerance</Label>
+                  <Select value={riskTolerance} onValueChange={(val) => setRiskTolerance(val as 'low' | 'medium' | 'high')}>
+                    <SelectTrigger id="risk-tolerance">
+                      <SelectValue placeholder="Select risk tolerance" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low - Conservative</SelectItem>
+                      <SelectItem value="medium">Medium - Balanced</SelectItem>
+                      <SelectItem value="high">High - Aggressive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="time-horizon">Investment Horizon</Label>
+                  <Select value={investmentHorizon} onValueChange={(val) => setInvestmentHorizon(val as 'short' | 'medium' | 'long')}>
+                    <SelectTrigger id="time-horizon">
+                      <SelectValue placeholder="Select time horizon" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="short">Short-term (0-2 years)</SelectItem>
+                      <SelectItem value="medium">Medium-term (2-5 years)</SelectItem>
+                      <SelectItem value="long">Long-term (5+ years)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+          
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Suggested Topics</CardTitle>
@@ -128,6 +175,7 @@ const AIAdvisor = () => {
                     variant="outline" 
                     className="w-full justify-start text-sm h-auto py-2 text-left"
                     onClick={() => setInput(topic)}
+                    disabled={isPending}
                   >
                     {topic}
                   </Button>
@@ -151,7 +199,7 @@ const AIAdvisor = () => {
                 </div>
               </div>
               <p className="text-sm">
-                Powered by advanced market analysis and financial data, your AI Advisor provides personalized investment guidance based on your goals, risk tolerance, and market conditions.
+                Powered by Google's Gemini AI and financial data, your AI Advisor provides personalized investment guidance based on your goals, risk tolerance, and market conditions.
               </p>
             </CardContent>
           </Card>

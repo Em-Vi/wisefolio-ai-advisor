@@ -1,7 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 
-const OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY');
+const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -15,8 +15,8 @@ serve(async (req) => {
   }
 
   try {
-    if (!OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY is not set');
+    if (!GEMINI_API_KEY) {
+      throw new Error('GEMINI_API_KEY is not set');
     }
 
     const { query, userContext } = await req.json();
@@ -27,7 +27,7 @@ serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       );
     }
-
+    
     // Construct the system prompt with financial expertise
     const systemPrompt = `You are WisePortfolio's AI Financial Advisor, a sophisticated financial expert specializing in investment strategies, market analysis, and wealth management.
     
@@ -47,31 +47,44 @@ serve(async (req) => {
     
     If you don't know something, acknowledge it and suggest reliable sources for further information.`;
 
-    // Make request to OpenAI
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // Combine user context with query
+    const userMessage = `User context: ${JSON.stringify(userContext)}\n\nUser query: ${query}`;
+
+    // Make request to Gemini API
+    const response = await fetch('https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
         'Content-Type': 'application/json',
+        'x-goog-api-key': GEMINI_API_KEY
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: `User context: ${JSON.stringify(userContext)}\n\nUser query: ${query}` }
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: systemPrompt },
+              { text: userMessage }
+            ]
+          }
         ],
-        temperature: 0.7,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 800,
+        },
       }),
     });
 
     const data = await response.json();
-
+    
     if (data.error) {
-      throw new Error(data.error.message || 'Error from OpenAI API');
+      throw new Error(data.error.message || 'Error from Gemini API');
     }
 
+    // Extract the response text from Gemini
+    const generatedText = data.candidates[0].content.parts[0].text;
+
     return new Response(
-      JSON.stringify({ response: data.choices[0].message.content }),
+      JSON.stringify({ response: generatedText }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
