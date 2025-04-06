@@ -12,6 +12,7 @@ import StockAnalyzer from "@/pages/StockAnalyzer";
 import InvestorJournal from "@/pages/InvestorJournal";
 import AIAdvisor from "@/pages/AIAdvisor";
 import PortfolioSimulator from "@/pages/PortfolioSimulator";
+import MarketDashboard from "@/pages/MarketDashboard";
 import Auth from "@/pages/Auth";
 import NotFound from "@/pages/NotFound";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
@@ -35,6 +36,7 @@ const App = () => (
                   <Route path="investor-journal" element={<InvestorJournal />} />
                   <Route path="ai-advisor" element={<AIAdvisor />} />
                   <Route path="portfolio-simulator" element={<PortfolioSimulator />} />
+                  <Route path="market-dashboard" element={<MarketDashboard />} />
                 </Route>
               </Route>
               <Route path="*" element={<NotFound />} />
