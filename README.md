@@ -1,35 +1,79 @@
-# Wisefolio
 
-An AI-powered web app that helps users make smarter investment decisions with real-time stock data, financial news, sentiment analysis, and a Gemini-powered financial advisor chatbot.
+
+---
+
+# AI Stock Analyzer
+
+A full-stack AI-powered web application that helps users make smarter investment decisions using real-time stock data, financial news, sentiment analysis, and an AI financial advisor chatbot.
 
 ---
 
 ## Features
 
-- **Live Stock Feed** – Real-time data for selected stocks
-- **Financial News** – Latest updates on stock-related events
-- **AI Financial Advisor** – Chatbot powered by Gemini AI for smart investment tips
-- **Stock Analyzer** – Personalized suggestions based on:
-  - Selected stocks
+- **Live Stock Feed**: Real-time stock prices and trends.
+- **Financial News**: Latest market news based on selected stocks.
+- **AI Financial Advisor**: Chatbot that offers investment guidance.
+- **Stock Analyzer**: Personalized suggestions based on:
+  - Stocks of interest
   - Investment amount
-  - Risk preference
-- **Bonus Feature** – Added by the AI agent
+  - Risk level
+- **BONUS Feature**: (Added by developer)
 
 ---
 
 ## Tech Stack
 
-- **Frontend**: React.js
-- **Backend**: Supabase (Database + Auth)
-- **AI Integration**: Google Gemini API
-- **Stock Data Source**: [Finnhub.io](https://finnhub.io/)
+- **Frontend**: React / Next.js
+- **Backend**: Node.js / Fastify / Supabase
+- **AI Integration**: OpenAI API
+- **Data Source**: [Finnhub.io](https://finnhub.io/)
 - **Charting**: Chart.js / ApexCharts
 
 ---
 
-## Getting Started
+## Setup Instructions
 
 1. **Clone the Repo**
    ```bash
    git clone https://github.com/your-username/ai-stock-analyzer.git
    cd ai-stock-analyzer
+
+2. Install Dependencies
+
+npm install
+
+
+3. Add Environment Variables Create a .env file in the root and add your API keys:
+
+FINNHUB_API_KEY=your_finnhub_api_key
+OPENAI_API_KEY=your_openai_api_key
+
+
+4. Run the App
+
+npm run dev
+
+
+
+
+---
+
+API Endpoints Used
+
+/api/quote - Real-time stock price
+
+/api/news - Financial news
+
+/api/metrics - Company fundamentals
+
+/api/sentiment - News sentiment
+
+
+
+---
+
+License
+
+This project is for educational and experimental purposes.
+
+---
