@@ -4,34 +4,34 @@
 
 # AI Stock Analyzer
 
-A full-stack AI-powered web application that helps users make smarter investment decisions using real-time stock data, financial news, sentiment analysis, and an AI financial advisor chatbot.
+An AI-powered web app that helps users make smarter investment decisions with real-time stock data, financial news, sentiment analysis, and a Gemini-powered financial advisor chatbot.
 
 ---
 
 ## Features
 
-- **Live Stock Feed**: Real-time stock prices and trends.
-- **Financial News**: Latest market news based on selected stocks.
-- **AI Financial Advisor**: Chatbot that offers investment guidance.
-- **Stock Analyzer**: Personalized suggestions based on:
-  - Stocks of interest
+- **Live Stock Feed** – Real-time data for selected stocks
+- **Financial News** – Latest updates on stock-related events
+- **AI Financial Advisor** – Chatbot powered by Gemini AI for smart investment tips
+- **Stock Analyzer** – Personalized suggestions based on:
+  - Selected stocks
   - Investment amount
-  - Risk level
-- **BONUS Feature**: (Added by developer)
+  - Risk preference
+- **Bonus Feature** – Added by the AI agent
 
 ---
 
 ## Tech Stack
 
-- **Frontend**: React / Next.js
-- **Backend**: Node.js / Fastify / Supabase
-- **AI Integration**: OpenAI API
-- **Data Source**: [Finnhub.io](https://finnhub.io/)
+- **Frontend**: React.js
+- **Backend**: Supabase (Database + Auth)
+- **AI Integration**: Google Gemini API
+- **Stock Data Source**: [Finnhub.io](https://finnhub.io/)
 - **Charting**: Chart.js / ApexCharts
 
 ---
 
-## Setup Instructions
+## Getting Started
 
 1. **Clone the Repo**
    ```bash
@@ -43,13 +43,15 @@ A full-stack AI-powered web application that helps users make smarter investment
 npm install
 
 
-3. Add Environment Variables Create a .env file in the root and add your API keys:
+3. Add Environment Variables Create a .env file and add:
 
-FINNHUB_API_KEY=your_finnhub_api_key
-OPENAI_API_KEY=your_openai_api_key
+VITE_FINNHUB_API_KEY=your_finnhub_api_key
+VITE_GEMINI_API_KEY=your_gemini_api_key
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key
 
 
-4. Run the App
+4. Run Locally
 
 npm run dev
 
@@ -58,15 +60,15 @@ npm run dev
 
 ---
 
-API Endpoints Used
+API Endpoints Used (Finnhub)
 
-/api/quote - Real-time stock price
+/quote – Real-time stock prices
 
-/api/news - Financial news
+/news – Latest stock news
 
-/api/metrics - Company fundamentals
+/metric – Key financial metrics
 
-/api/sentiment - News sentiment
+/news-sentiment – Sentiment analysis of stock news
 
 
 
@@ -74,6 +76,8 @@ API Endpoints Used
 
 License
 
-This project is for educational and experimental purposes.
+This project is for personal, educational, and experimental use.
 
 ---
+
+
