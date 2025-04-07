@@ -86,7 +86,7 @@ export function AppSidebar() {
   const location = useLocation();
 
   return (
-    <Sidebar>
+    <Sidebar variant="sidebar" collapsible="offcanvas">
       <SidebarContent>
         <div className="py-4 px-3 flex items-center">
           <div className="w-8 h-8 rounded bg-finance-blue-700 flex items-center justify-center mr-2">
@@ -108,7 +108,10 @@ export function AppSidebar() {
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild>
+                  <SidebarMenuButton 
+                    asChild
+                    tooltip={item.title}
+                  >
                     <Link 
                       to={item.path} 
                       className={cn({

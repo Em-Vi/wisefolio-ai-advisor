@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { AppSidebar } from './AppSidebar';
 import { ProfileButton } from '../auth/ProfileButton';
 import { SidebarTrigger } from '@/components/ui/sidebar';
+import { Menu } from 'lucide-react';
 
 export function WiseAppLayout() {
   const { user } = useAuth();
@@ -36,9 +37,11 @@ export function WiseAppLayout() {
       <AppSidebar />
       <div className="flex-1 flex flex-col min-h-screen">
         <header className="h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10 flex items-center px-4">
-          <SidebarTrigger />
+          <SidebarTrigger className="h-9 w-9 mr-2">
+            <Menu className="h-5 w-5" />
+          </SidebarTrigger>
           <div className="flex-1 flex justify-between items-center">
-            <h1 className="text-lg font-medium ml-2">WisePortfolio</h1>
+            <h1 className="text-lg font-medium">WisePortfolio</h1>
             <div className="flex items-center space-x-4">
               <button className="rounded-full w-8 h-8 bg-muted flex items-center justify-center">
                 <span className="sr-only">Notifications</span>
