@@ -19,9 +19,11 @@ export function WiseAppLayout() {
     
     if (fullName) {
       const nameParts = fullName.split(' ');
-      if (nameParts.length >= 2) {
-        return `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase();
+      if (nameParts.length >= 2){
+        if (nameParts[1]!=''){
+        return `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`.toUpperCase();}
       }
+      
       return fullName[0].toUpperCase();
     }
     
@@ -33,7 +35,7 @@ export function WiseAppLayout() {
   };
   
   return (
-    <div className="min-h-screen flex w-full">
+    <div className="min-h-screen flex w-full overflow-x-hidden">
       <AppSidebar />
       <div className="flex-1 flex flex-col min-h-screen">
         <header className="h-14 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10 flex items-center px-4">
@@ -41,7 +43,7 @@ export function WiseAppLayout() {
             <Menu className="h-5 w-5" />
           </SidebarTrigger>
           <div className="flex-1 flex justify-between items-center">
-            <h1 className="text-lg font-medium">WisePortfolio</h1>
+            <h1 className="text-lg font-medium">Wisefolio</h1>
             <div className="flex items-center space-x-4">
               <button className="rounded-full w-8 h-8 bg-muted flex items-center justify-center">
                 <span className="sr-only">Notifications</span>
@@ -54,7 +56,7 @@ export function WiseAppLayout() {
             </div>
           </div>
         </header>
-        <main className="flex-1 p-4 md:p-6 overflow-auto">
+        <main className="flex-1 p-4 md:p-6">
           <Outlet />
         </main>
       </div>

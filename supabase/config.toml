@@ -1,4 +1,3 @@
-
 # A string used to distinguish different Supabase projects on the same host. Defaults to the working
 # directory name when running `supabase init`.
 project_id = "jxjnsxmrvmpvvwznyiac"
@@ -74,7 +73,8 @@ url = ""
 
 [functions]
 # Port to use for functions development server.
-port = 54328
+[functions.port]
+http = 54328
 
 [functions.stock-analyzer]
 verify_jwt = true
@@ -83,6 +83,9 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.finnhub-api]
+verify_jwt = true
+
+[functions.alpha-vantage-api]
 verify_jwt = true
 
 [analytics]

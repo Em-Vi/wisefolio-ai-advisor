@@ -1,5 +1,4 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useFinnhub, StockQuote, CompanyProfile, CompanyMetrics } from '@/hooks/useFinnhub';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -13,50 +12,60 @@ interface RealTimeStockDataProps {
 }
 
 export function RealTimeStockData({ symbol, refreshInterval = 60000 }: RealTimeStockDataProps) {
-  const { getStockQuote, getCompanyProfile, getCompanyMetrics, loading } = useFinnhub();
+  const { getStockQuote, getCompanyProfile, getCompanyMetrics, loading, apiLoading } = useFinnhub();
   const [quote, setQuote] = useState<StockQuote | null>(null);
   const [profile, setProfile] = useState<CompanyProfile | null>(null);
   const [metrics, setMetrics] = useState<CompanyMetrics | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
-  const fetchData = async () => {
+  const fetchQuote = useCallback(async () => {
     const quoteData = await getStockQuote(symbol);
     if (quoteData) {
       setQuote(quoteData);
       setLastUpdated(new Date());
     }
+  }, [symbol, getStockQuote]);
 
-    // Only fetch profile and metrics once, as they don't change frequently
-    if (!profile) {
-      const profileData = await getCompanyProfile(symbol);
-      if (profileData) {
-        setProfile(profileData);
-      }
+  const fetchProfileAndMetrics = useCallback(async () => {
+    setInitialLoadComplete(false);
+    setProfile(null);
+    setMetrics(null);
+    const profileData = await getCompanyProfile(symbol);
+    if (profileData) {
+      setProfile(profileData);
     }
-
-    if (!metrics) {
-      const metricsData = await getCompanyMetrics(symbol);
-      if (metricsData) {
-        setMetrics(metricsData);
-      }
+    const metricsData = await getCompanyMetrics(symbol);
+    if (metricsData) {
+      setMetrics(metricsData);
     }
-  };
+    setInitialLoadComplete(true);
+  }, [symbol, getCompanyProfile, getCompanyMetrics]);
 
   useEffect(() => {
-    fetchData();
-    
-    const intervalId = setInterval(() => {
-      fetchData();
-    }, refreshInterval);
-    
-    return () => clearInterval(intervalId);
-  }, [symbol, refreshInterval]);
+    fetchQuote();
+    fetchProfileAndMetrics();
 
-  const isPositive = quote?.d && quote.d >= 0;
+    const intervalId = setInterval(fetchQuote, refreshInterval);
+
+    return () => clearInterval(intervalId);
+  }, [symbol, refreshInterval, fetchQuote, fetchProfileAndMetrics]);
+
+  const isPositive = quote?.d !== undefined && quote.d >= 0;
+
+  const isLoadingProfile = apiLoading[`profile-${symbol}`] || false;
+  const isLoadingMetrics = apiLoading[`metrics-${symbol}`] || false;
+  const isLoadingQuote = apiLoading[`quote-${symbol}`] || false;
+  const isOverallLoading = !initialLoadComplete || (!quote && isLoadingQuote);
 
   return (
     <Card className="overflow-hidden">
-      {profile && (
+      {isLoadingProfile ? (
+        <CardHeader className="pb-2">
+          <Skeleton className="h-6 w-3/4 mb-1" />
+          <Skeleton className="h-4 w-1/2" />
+        </CardHeader>
+      ) : profile ? (
         <CardHeader className="pb-2">
           <div className="flex items-start justify-between">
             <div>
@@ -70,17 +79,33 @@ export function RealTimeStockData({ symbol, refreshInterval = 60000 }: RealTimeS
             )}
           </div>
         </CardHeader>
+      ) : (
+        <CardHeader className="pb-2">
+          <CardTitle className="text-xl font-bold">{symbol}</CardTitle>
+        </CardHeader>
       )}
+
       <CardContent>
-        {loading && !quote ? (
+        {isOverallLoading ? (
           <div className="space-y-3">
             <Skeleton className="h-8 w-40" />
             <Skeleton className="h-6 w-28" />
-            <div className="grid grid-cols-2 gap-4 mt-4">
-              <Skeleton className="h-16" />
-              <Skeleton className="h-16" />
-              <Skeleton className="h-16" />
-              <Skeleton className="h-16" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+              <Skeleton className="h-10" />
+              <Skeleton className="h-10" />
+              <Skeleton className="h-10" />
+              <Skeleton className="h-10" />
+            </div>
+            <div className="mt-4 pt-4 border-t">
+              <Skeleton className="h-5 w-24 mb-2" />
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2">
+                <Skeleton className="h-10" />
+                <Skeleton className="h-10" />
+                <Skeleton className="h-10" />
+                <Skeleton className="h-10" />
+                <Skeleton className="h-10" />
+                <Skeleton className="h-10" />
+              </div>
             </div>
           </div>
         ) : quote ? (
@@ -88,15 +113,19 @@ export function RealTimeStockData({ symbol, refreshInterval = 60000 }: RealTimeS
             <div className="mb-4">
               <div className="flex items-baseline justify-between">
                 <div className="text-3xl font-bold">{formatCurrency(quote.c)}</div>
-                <div className={`flex items-center text-sm ${isPositive ? 'text-finance-green-600' : 'text-red-600'}`}>
-                  {isPositive ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
-                  <span>{formatCurrency(Math.abs(quote.d))}</span>
-                  <span className="ml-1">({Math.abs(quote.dp).toFixed(2)}%)</span>
+                {quote.d !== undefined && quote.dp !== undefined && (
+                  <div className={`flex items-center text-sm ${isPositive ? 'text-finance-green-600' : 'text-red-600'}`}>
+                    {isPositive ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
+                    <span>{formatCurrency(Math.abs(quote.d))}</span>
+                    <span className="ml-1">({Math.abs(quote.dp).toFixed(2)}%)</span>
+                  </div>
+                )}
+              </div>
+              {lastUpdated && (
+                <div className="text-xs text-muted-foreground mt-1">
+                  Last updated: {lastUpdated.toLocaleTimeString()}
                 </div>
-              </div>
-              <div className="text-xs text-muted-foreground mt-1">
-                Last updated: {lastUpdated.toLocaleTimeString()}
-              </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-2">
@@ -118,7 +147,19 @@ export function RealTimeStockData({ symbol, refreshInterval = 60000 }: RealTimeS
               </div>
             </div>
 
-            {metrics && (
+            {isLoadingMetrics ? (
+              <div className="mt-4 pt-4 border-t">
+                <Skeleton className="h-5 w-24 mb-2" />
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2">
+                  <Skeleton className="h-10" />
+                  <Skeleton className="h-10" />
+                  <Skeleton className="h-10" />
+                  <Skeleton className="h-10" />
+                  <Skeleton className="h-10" />
+                  <Skeleton className="h-10" />
+                </div>
+              </div>
+            ) : metrics ? (
               <div className="mt-4 pt-4 border-t">
                 <div className="text-sm font-medium mb-2">Key Financials</div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-2">
@@ -172,6 +213,8 @@ export function RealTimeStockData({ symbol, refreshInterval = 60000 }: RealTimeS
                   )}
                 </div>
               </div>
+            ) : (
+              <div className="mt-4 pt-4 border-t text-sm text-muted-foreground">Key financials not available.</div>
             )}
           </>
         ) : (

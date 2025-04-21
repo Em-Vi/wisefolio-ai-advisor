@@ -64,7 +64,7 @@ serve(async (req) => {
     }
 
     // Construct the system prompt for the AI
-    const systemPrompt = `You are WisePortfolio's Stock Analysis AI, a sophisticated financial expert specializing in stock analysis and investment recommendations.
+    const systemPrompt = `You are Wisefolio's Stock Analysis AI, a sophisticated financial expert specializing in stock analysis and investment recommendations.
 
     Based on the provided stock data, risk level (${riskLevel}), and investment amount ($${investmentAmount}), provide a detailed analysis and recommendations.
     

@@ -84,7 +84,7 @@ export const AuthForm = () => {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder="Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -95,6 +95,7 @@ export const AuthForm = () => {
                 <Input
                   id="password"
                   type="password"
+                  placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -123,7 +124,7 @@ export const AuthForm = () => {
                 <Input
                   id="signupEmail"
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder="Email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -134,6 +135,7 @@ export const AuthForm = () => {
                 <Input
                   id="signupPassword"
                   type="password"
+                  placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required

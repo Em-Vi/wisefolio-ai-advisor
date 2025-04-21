@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
 
@@ -62,6 +61,10 @@ export interface NewsItem {
   url: string;
 }
 
+export interface MarketNewsItem extends NewsItem {
+  // Add any specific fields if different, otherwise inherits NewsItem
+}
+
 export interface NewsSentiment {
   buzz: {
     articlesInLastWeek: number;
@@ -88,87 +91,135 @@ export interface StockCandle {
   v: number[];  // Volumes
 }
 
+export interface SymbolSearchResult {
+  count: number;
+  result: Array<{
+    description: string;
+    displaySymbol: string;
+    symbol: string;
+    type: string;
+  }>;
+}
+
 export interface UseFinnhubReturn {
   loading: boolean;
+  apiLoading: Record<string, boolean>;
   getStockQuote: (symbol: string) => Promise<StockQuote | null>;
   getCompanyProfile: (symbol: string) => Promise<CompanyProfile | null>;
   getCompanyMetrics: (symbol: string) => Promise<CompanyMetrics | null>;
   getStockNews: (symbol?: string, from?: string, to?: string, category?: string, minId?: number) => Promise<NewsItem[] | null>;
   getNewsSentiment: (symbol: string) => Promise<NewsSentiment | null>;
   getStockCandles: (symbol: string, resolution: string, from: number, to: number) => Promise<StockCandle | null>;
+  searchSymbols: (query: string) => Promise<SymbolSearchResult | null>;
+  getMarketNews: (category: string, minId?: number) => Promise<MarketNewsItem[] | null>;
 }
 
 export const useFinnhub = (): UseFinnhubReturn => {
-  const [loading, setLoading] = useState(false);
+  const [apiLoading, setApiLoading] = useState<Record<string, boolean>>({});
 
-  const callFinnhubApi = async <T,>(endpoint: string, params: Record<string, string | number>): Promise<T | null> => {
-    setLoading(true);
+  const callFinnhubApi = useCallback(async <T,>(endpoint: string, params: Record<string, string | number | undefined>, uniqueKey?: string): Promise<T | null> => {
+    const loadingKey = uniqueKey || endpoint;
+    setApiLoading(prev => ({ ...prev, [loadingKey]: true }));
     try {
+      const filteredParams = Object.entries(params)
+        .filter(([_, value]) => value !== undefined)
+        .reduce((obj, [key, value]) => {
+          obj[key] = value;
+          return obj;
+        }, {} as Record<string, string | number>);
+        
       const { data, error } = await supabase.functions.invoke('finnhub-api', {
-        body: { endpoint, params },
+        body: { endpoint, params: filteredParams },
       });
 
       if (error) {
+        console.log(error)
         throw new Error(error.message);
+      }
+      
+      if (!data || (typeof data === 'object' && data !== null && 'error' in data)) {
+         const apiError = (data as any)?.error || 'Received empty or error response from API function';
+         console.error(`Finnhub API Function Error (${endpoint}):`, apiError);
+         toast.error(`API Error: ${apiError}`);
+         return null;
       }
 
       return data?.data as T || null;
     } catch (error) {
       console.error(`Error calling Finnhub API (${endpoint}):`, error);
-      toast.error(`Failed to fetch data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      if (!(error instanceof Error && error.message.includes('API Function Error'))) {
+         toast.error(`Failed to fetch data: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      }
       return null;
     } finally {
-      setLoading(false);
+      setApiLoading(prev => ({ ...prev, [loadingKey]: false }));
     }
-  };
+  }, [setApiLoading]);
 
-  const getStockQuote = (symbol: string) => {
-    return callFinnhubApi<StockQuote>('quote', { symbol });
-  };
+  const getStockQuote = useCallback((symbol: string) => {
+    return callFinnhubApi<StockQuote>('quote', { symbol }, `quote-${symbol}`);
+  }, [callFinnhubApi]);
 
-  const getCompanyProfile = (symbol: string) => {
-    return callFinnhubApi<CompanyProfile>('stock/profile2', { symbol });
-  };
+  const getCompanyProfile = useCallback((symbol: string) => {
+    return callFinnhubApi<CompanyProfile>('stock/profile2', { symbol }, `profile-${symbol}`);
+  }, [callFinnhubApi]);
 
-  const getCompanyMetrics = (symbol: string) => {
+  const getCompanyMetrics = useCallback((symbol: string) => {
     return callFinnhubApi<CompanyMetrics>('stock/metric', { 
       symbol, 
       metric: 'all' 
-    });
-  };
+    }, `metrics-${symbol}`);
+  }, [callFinnhubApi]);
 
-  const getStockNews = (symbol?: string, from?: string, to?: string, category?: string, minId?: number) => {
-    const params: Record<string, string | number> = {};
+  const getStockNews = useCallback((symbol?: string, from?: string, to?: string, category: string = 'general', minId?: number) => {
+    const params: Record<string, string | number | undefined> = { category };
     
     if (symbol) params.symbol = symbol;
     if (from) params.from = from;
     if (to) params.to = to;
-    if (category) params.category = category;
     if (minId) params.minId = minId;
     
-    return callFinnhubApi<NewsItem[]>('company-news', params);
-  };
+    const key = symbol ? `company-news-${symbol}` : `market-news-${category}`;
+    const endpoint = symbol ? 'company-news' : 'news';
 
-  const getNewsSentiment = (symbol: string) => {
-    return callFinnhubApi<NewsSentiment>('news-sentiment', { symbol });
-  };
+    return callFinnhubApi<NewsItem[]>(endpoint, params, key);
+  }, [callFinnhubApi]);
 
-  const getStockCandles = (symbol: string, resolution: string, from: number, to: number) => {
+  const getNewsSentiment = useCallback((symbol: string) => {
+    return callFinnhubApi<NewsSentiment>('news-sentiment', { symbol }, `sentiment-${symbol}`);
+  }, [callFinnhubApi]);
+
+  const getStockCandles = useCallback((symbol: string, resolution: string, from: number, to: number) => {
     return callFinnhubApi<StockCandle>('stock/candle', { 
       symbol,
       resolution,
       from,
       to
-    });
-  };
+    }, `candles-${symbol}-${resolution}`);
+  }, [callFinnhubApi]);
+
+  const searchSymbols = useCallback((query: string) => {
+    return callFinnhubApi<SymbolSearchResult>('search', { q: query }, 'search');
+  }, [callFinnhubApi]);
+  
+  const getMarketNews = useCallback((category: string, minId?: number) => {
+    const params: Record<string, string | number | undefined> = { category };
+    if (minId) params.minId = minId;
+    return callFinnhubApi<MarketNewsItem[]>('news', params, `market-news-${category}`);
+  }, [callFinnhubApi]);
+
+  const overallLoading = useMemo(() => Object.values(apiLoading).some(Boolean), [apiLoading]);
 
   return {
-    loading,
+    loading: overallLoading,
+    apiLoading,
     getStockQuote,
     getCompanyProfile,
     getCompanyMetrics,
     getStockNews,
     getNewsSentiment,
     getStockCandles,
+    searchSymbols,
+    getMarketNews,
   };
 };

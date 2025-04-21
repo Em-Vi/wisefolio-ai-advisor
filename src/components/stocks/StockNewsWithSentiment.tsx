@@ -1,6 +1,5 @@
-
-import React, { useState, useEffect } from 'react';
-import { useFinnhub, NewsItem, NewsSentiment } from '@/hooks/useFinnhub';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useFinnhub, NewsItem, NewsSentiment, MarketNewsItem } from '@/hooks/useFinnhub';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -9,68 +8,68 @@ import { formatDistanceToNow, format } from 'date-fns';
 
 interface StockNewsWithSentimentProps {
   symbol?: string;
+  category?: string;
   limit?: number;
-  refreshInterval?: number; // in milliseconds
+  refreshInterval?: number;
 }
 
 export function StockNewsWithSentiment({ 
-  symbol, 
+  symbol,
+  category = 'general',
   limit = 5, 
-  refreshInterval = 300000 // 5 minutes by default
+  refreshInterval = 300000
 }: StockNewsWithSentimentProps) {
-  const { getStockNews, getNewsSentiment, loading } = useFinnhub();
-  const [news, setNews] = useState<NewsItem[]>([]);
+  const { getStockNews, getNewsSentiment, getMarketNews, loading, apiLoading } = useFinnhub();
+  const [news, setNews] = useState<NewsItem[] | MarketNewsItem[]>([]);
   const [sentiment, setSentiment] = useState<NewsSentiment | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const fetchNews = async () => {
-    // Calculate date range (last 7 days)
-    const to = new Date();
-    const from = new Date();
-    from.setDate(from.getDate() - 7);
+  const fetchNewsData = useCallback(async () => {
+    let newsData: NewsItem[] | MarketNewsItem[] | null = null;
     
-    const toStr = format(to, 'yyyy-MM-dd');
-    const fromStr = format(from, 'yyyy-MM-dd');
-    
-    // Fetch news
-    const newsData = await getStockNews(
-      symbol,
-      fromStr,
-      toStr
-    );
-    
-    if (newsData) {
-      setNews(newsData.slice(0, limit));
-      setLastUpdated(new Date());
-    }
-    
-    // Fetch sentiment if symbol is provided
     if (symbol) {
+      const to = new Date();
+      const from = new Date();
+      from.setDate(from.getDate() - 7);
+      const toStr = format(to, 'yyyy-MM-dd');
+      const fromStr = format(from, 'yyyy-MM-dd');
+      
+      newsData = await getStockNews(symbol, fromStr, toStr);
+      
       const sentimentData = await getNewsSentiment(symbol);
       if (sentimentData) {
         setSentiment(sentimentData);
+      } else {
+        setSentiment(null);
       }
+
+    } else {
+      newsData = await getMarketNews(category);
+      setSentiment(null);
     }
-  };
+
+    if (newsData) {
+      setNews(newsData.slice(0, limit));
+      setLastUpdated(new Date());
+    } else {
+      setNews([]);
+    }
+  }, [symbol, category, limit, getStockNews, getNewsSentiment, getMarketNews]);
 
   useEffect(() => {
-    fetchNews();
+    fetchNewsData();
     
-    const intervalId = setInterval(() => {
-      fetchNews();
-    }, refreshInterval);
+    const intervalId = setInterval(fetchNewsData, refreshInterval);
     
     return () => clearInterval(intervalId);
-  }, [symbol, limit, refreshInterval]);
+  }, [fetchNewsData, refreshInterval]);
 
-  // Function to determine sentiment level
   const getSentimentLevel = (score: number): 'positive' | 'neutral' | 'negative' => {
     if (score >= 0.5) return 'positive';
     if (score <= -0.3) return 'negative';
     return 'neutral';
   };
 
-  // Function to render sentiment badge
   const renderSentimentBadge = (level: 'positive' | 'neutral' | 'negative') => {
     const colors = {
       positive: 'bg-finance-green-50 text-finance-green-600 border-finance-green-200',
@@ -90,15 +89,21 @@ export function StockNewsWithSentiment({
     );
   };
 
+  const isLoadingNews = symbol 
+    ? (apiLoading[`company-news-${symbol}`] || false)
+    : (apiLoading[`market-news-${category}`] || false);
+  const isLoadingSentiment = symbol ? (apiLoading[`sentiment-${symbol}`] || false) : false;
+  const isOverallLoading = (isLoadingNews || isLoadingSentiment) && news.length === 0;
+
   return (
     <Card>
       <CardHeader className="pb-2">
         <div className="flex justify-between items-center">
           <CardTitle className="flex items-center text-xl">
             <Newspaper className="h-5 w-5 mr-2" />
-            {symbol ? `${symbol} News` : 'Market News'}
+            {symbol ? `${symbol} News` : `${category.charAt(0).toUpperCase() + category.slice(1)} News`}
           </CardTitle>
-          {sentiment && (
+          {symbol && sentiment && (
             <div className="flex items-center space-x-1 text-xs">
               <span className="text-muted-foreground mr-1">Sentiment:</span>
               {renderSentimentBadge(
@@ -106,13 +111,18 @@ export function StockNewsWithSentiment({
               )}
             </div>
           )}
+          {symbol && isLoadingSentiment && !sentiment && (
+             <Skeleton className="h-5 w-20" />
+          )}
         </div>
-        <div className="text-xs text-muted-foreground">
-          Last updated: {lastUpdated.toLocaleTimeString()}
-        </div>
+        {lastUpdated && (
+          <div className="text-xs text-muted-foreground">
+            Last updated: {lastUpdated.toLocaleTimeString()}
+          </div>
+        )}
       </CardHeader>
       <CardContent className="pb-2">
-        {loading && news.length === 0 ? (
+        {isOverallLoading ? (
           <div className="space-y-4">
             {[...Array(3)].map((_, i) => (
               <div key={i} className="space-y-2">
@@ -177,7 +187,7 @@ export function StockNewsWithSentiment({
           </div>
         ) : (
           <div className="text-center py-4 text-muted-foreground">
-            No recent news available {symbol ? `for ${symbol}` : ''}
+            No recent news available {symbol ? `for ${symbol}` : `in ${category}`}
           </div>
         )}
       </CardContent>

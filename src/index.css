@@ -110,6 +110,6 @@
   }
   
   .finance-chart-container {
-    @apply w-full h-52 md:h-64 bg-white rounded-lg p-2;
+    @apply w-full h-auto md:h-auto bg-white rounded-lg p-2;
   }
 }

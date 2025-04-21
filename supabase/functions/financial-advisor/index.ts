@@ -29,7 +29,7 @@ serve(async (req) => {
     }
     
     // Construct the system prompt with financial expertise
-    const systemPrompt = `You are WisePortfolio's AI Financial Advisor, a sophisticated financial expert specializing in investment strategies, market analysis, and wealth management.
+    const systemPrompt = `You are Wisefolio's AI Financial Advisor, a sophisticated financial expert specializing in investment strategies, market analysis, and wealth management.
     
     Key responsibilities:
     - Provide personalized financial advice based on user's context
