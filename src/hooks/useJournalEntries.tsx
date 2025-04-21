@@ -19,14 +19,20 @@ export interface SupabaseJournalEntry {
 export type CreateJournalEntryInput = Omit<JournalEntry, 'id' | 'date'>;
 
 // Convert Supabase journal entry to our application format
-const mapSupabaseEntryToJournalEntry = (entry: SupabaseJournalEntry): JournalEntry => {
+const mapSupabaseEntryToJournalEntry = (entry: any): JournalEntry => {
+  // Ensure sentiment is one of the valid values
+  let sentiment: 'bullish' | 'bearish' | 'neutral' = 'neutral';
+  if (entry.sentiment === 'bullish' || entry.sentiment === 'bearish' || entry.sentiment === 'neutral') {
+    sentiment = entry.sentiment;
+  }
+  
   return {
     id: entry.id,
     date: entry.created_at,
     title: entry.title,
     content: entry.content,
     stocks: entry.stocks || [],
-    sentiment: entry.sentiment || 'neutral',
+    sentiment: sentiment,
     aiFeedback: entry.ai_feedback,
     cognitivebiases: [] // Initialize as empty array since column might not exist
   };

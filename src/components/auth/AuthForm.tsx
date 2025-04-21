@@ -113,7 +113,7 @@ export const AuthForm = () => {
                 <Label htmlFor="fullName">Full Name</Label>
                 <Input
                   id="fullName"
-                  placeholder="John Doe"
+                  placeholder="Your name"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
