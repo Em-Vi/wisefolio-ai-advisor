@@ -1,32 +1,84 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StockChart } from '@/components/stocks/StockChart';
+import { RealTimeStockData } from '@/components/stocks/RealTimeStockData';
+import { MiniStockPrice } from '@/components/stocks/MiniStockPrice';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Slider } from '@/components/ui/slider';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { toast } from '@/lib/toast';
-import { generateMockChartData, generateStockRecommendations, popularStocks } from '@/data/mockStockData';
+import { popularStocks } from '@/data/mockStockData';
 import { formatCurrency } from '@/lib/formatUtils';
-import { Search, TrendingUp, BarChartHorizontal, Award, AlertTriangle } from 'lucide-react';
+import { Search, TrendingUp, BarChartHorizontal, Award, AlertTriangle, Loader2, LineChart, AlertCircle, PieChart } from 'lucide-react';
+import { useFinnhub, SymbolSearchResult } from '@/hooks/useFinnhub';
+import { useGeminiStockAnalysis, GeminiStockRecommendation } from '@/hooks/useGeminiStockAnalysis';
+import debounce from 'lodash/debounce';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const StockAnalyzer = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStocks, setSelectedStocks] = useState<string[]>([]);
   const [investmentAmount, setInvestmentAmount] = useState(5000);
   const [riskLevel, setRiskLevel] = useState<'low' | 'medium' | 'high'>('medium');
-  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [recommendations, setRecommendations] = useState<GeminiStockRecommendation[]>([]);
   const [analysisGenerated, setAnalysisGenerated] = useState(false);
+  const [searchResults, setSearchResults] = useState<SymbolSearchResult['result']>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [analysisData, setAnalysisData] = useState<{
+    summary: string;
+    marketOutlook: string;
+    riskAssessment: string;
+  } | null>(null);
+  const [activeTab, setActiveTab] = useState('stocks');
   
-  const filteredStocks = searchTerm
-    ? popularStocks.filter(stock => 
-        stock.symbol.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        stock.name.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : popularStocks;
+  const { searchSymbols, loading: finnhubLoading } = useFinnhub();
+  const stockAnalysis = useGeminiStockAnalysis();
+  
+  const debouncedSearch = useCallback(
+    debounce(async (query: string) => {
+      if (!query || query.length < 2) {
+        setSearchResults([]);
+        setIsSearching(false);
+        return;
+      }
+      
+      try {
+        const results = await searchSymbols(query);
+        if (results && results.result) {
+          const filteredResults = results.result.filter(item => 
+            item.type === 'Common Stock' || item.type === 'stock'
+          );
+          setSearchResults(filteredResults.slice(0, 10));
+        }
+      } catch (error) {
+        console.error("Search error:", error);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 500),
+    [searchSymbols]
+  );
+  
+  useEffect(() => {
+    if (searchTerm.length >= 2) {
+      setIsSearching(true);
+      debouncedSearch(searchTerm);
+    } else {
+      setSearchResults([]);
+    }
+  }, [searchTerm, debouncedSearch]);
+  
+  const displayedStocks = searchTerm.length >= 2 
+    ? searchResults 
+    : popularStocks.slice(0, 10).map(stock => ({
+        symbol: stock.symbol,
+        description: stock.name,
+        displaySymbol: stock.symbol,
+        type: 'Common Stock'
+      }));
   
   const handleStockSelect = (stock: string) => {
     if (selectedStocks.includes(stock)) {
@@ -40,21 +92,38 @@ const StockAnalyzer = () => {
     }
   };
   
-  const handleGenerateAnalysis = () => {
+  const handleGenerateAnalysis = async () => {
     if (selectedStocks.length === 0) {
       toast.error('Please select at least one stock');
       return;
     }
     
-    setAnalysisGenerated(true);
-    const recs = generateStockRecommendations(riskLevel, 3);
-    setRecommendations(recs);
-    
-    toast.success('Analysis completed');
+    try {
+      const result = await stockAnalysis.mutateAsync({
+        symbols: selectedStocks,
+        riskLevel,
+        investmentAmount
+      });
+      
+      // Use the recommendations directly without regex parsing that could cause issues
+      setRecommendations(result.recommendations);
+      
+      // Use the analysis data directly to avoid regex parsing problems
+      setAnalysisData({
+        summary: result.analysis.summary,
+        marketOutlook: result.analysis.marketOutlook,
+        riskAssessment: result.analysis.riskAssessment
+      });
+      
+      setAnalysisGenerated(true);
+      toast.success('Analysis completed successfully');
+    } catch (error) {
+      console.error('Analysis error:', error);
+      toast.error('Failed to generate analysis. Please try again later.');
+    }
   };
   
   useEffect(() => {
-    // Reset analysis when parameters change
     if (analysisGenerated) {
       setAnalysisGenerated(false);
     }
@@ -86,17 +155,25 @@ const StockAnalyzer = () => {
                 <Search size={18} className="mr-2" />
                 Select Stocks to Analyze
               </CardTitle>
+              <CardDescription>
+                Search for stocks by name or symbol and select up to 5 for analysis
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Input
-                placeholder="Search stocks by name or symbol..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="mb-2"
-              />
+              <div className="relative">
+                <Input
+                  placeholder="Search stocks by name or symbol..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="mb-2"
+                />
+                {isSearching && (
+                  <Loader2 size={16} className="absolute right-3 top-3 animate-spin text-muted-foreground" />
+                )}
+              </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-60 overflow-y-auto py-1">
-                {filteredStocks.map((stock) => (
+                {displayedStocks.map((stock) => (
                   <div 
                     key={stock.symbol}
                     onClick={() => handleStockSelect(stock.symbol)}
@@ -108,36 +185,38 @@ const StockAnalyzer = () => {
                   >
                     <div>
                       <div className="font-medium">{stock.symbol}</div>
-                      <div className="text-xs text-muted-foreground">{stock.name}</div>
+                      <div className="text-xs text-muted-foreground">{stock.description}</div>
                     </div>
                     <div className="text-right">
-                      <div>{formatCurrency(stock.price)}</div>
-                      <div className={`text-xs ${stock.change >= 0 ? 'text-finance-green-600' : 'text-red-600'}`}>
-                        {stock.change >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
-                      </div>
+                      <MiniStockPrice symbol={stock.symbol} />
                     </div>
                   </div>
                 ))}
+                {displayedStocks.length === 0 && !isSearching && searchTerm.length >= 2 && (
+                  <div className="col-span-2 p-4 text-center text-muted-foreground">
+                    No stocks found matching "{searchTerm}".
+                  </div>
+                )}
               </div>
               
               <div className="flex flex-wrap gap-2 mt-4">
-                {selectedStocks.map(symbol => {
-                  const stock = popularStocks.find(s => s.symbol === symbol);
-                  return (
-                    <div 
-                      key={symbol}
-                      className="px-3 py-1 bg-finance-blue-100 rounded-full text-sm flex items-center"
+                {selectedStocks.map(symbol => (
+                  <div 
+                    key={symbol}
+                    className="px-3 py-1 bg-finance-blue-100 rounded-full text-sm flex items-center"
+                  >
+                    <span>{symbol}</span>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleStockSelect(symbol);
+                      }}
+                      className="ml-2 text-finance-blue-600 hover:text-finance-blue-800"
                     >
-                      <span>{symbol}</span>
-                      <button 
-                        onClick={() => handleStockSelect(symbol)}
-                        className="ml-2 text-finance-blue-600 hover:text-finance-blue-800"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  );
-                })}
+                      ✕
+                    </button>
+                  </div>
+                ))}
                 {selectedStocks.length === 0 && (
                   <div className="text-sm text-muted-foreground">No stocks selected</div>
                 )}
@@ -186,11 +265,15 @@ const StockAnalyzer = () => {
               
               <Button
                 onClick={handleGenerateAnalysis}
-                disabled={selectedStocks.length === 0}
+                disabled={selectedStocks.length === 0 || stockAnalysis.isPending}
                 className="w-full"
               >
-                <TrendingUp size={16} className="mr-2" />
-                Generate Analysis
+                {stockAnalysis.isPending ? (
+                  <Loader2 size={16} className="mr-2 animate-spin" />
+                ) : (
+                  <TrendingUp size={16} className="mr-2" />
+                )}
+                {stockAnalysis.isPending ? 'Analyzing...' : 'Generate Analysis'}
               </Button>
             </CardContent>
           </Card>
@@ -200,13 +283,16 @@ const StockAnalyzer = () => {
           {analysisGenerated ? (
             <div className="space-y-4">
               <Card>
-                <CardHeader>
+                <CardHeader className="pb-2">
                   <CardTitle className="text-lg flex items-center">
                     <Award size={18} className="mr-2" />
-                    Investment Recommendations
+                    Investment Analysis
                   </CardTitle>
+                  <CardDescription>
+                    AI-powered analysis based on your selected parameters
+                  </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-3 pt-4">
                   <div className="space-y-1 mb-3">
                     <div className="text-sm font-medium">Based on your parameters:</div>
                     <div className="text-sm">Investment: {formatCurrency(investmentAmount)}</div>
@@ -214,59 +300,108 @@ const StockAnalyzer = () => {
                     <div className="text-sm">Selected Stocks: {selectedStocks.join(', ')}</div>
                   </div>
                   
-                  <Alert className="my-3">
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription className="text-xs">
-                      These are simulated recommendations for demonstration purposes only.
-                    </AlertDescription>
-                  </Alert>
+                  {analysisData && analysisData.summary && (
+                    <div className="bg-muted rounded-md p-3 text-sm mt-3">
+                      <p>{analysisData.summary}</p>
+                    </div>
+                  )}
                   
-                  <div className="space-y-4 mt-4">
-                    {recommendations.map((rec, index) => (
-                      <div key={index} className="border rounded-md p-3">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <div className="font-medium">{rec.symbol}</div>
-                            <div className="text-xs text-muted-foreground">{rec.name}</div>
-                          </div>
-                          <div className="text-right">
-                            <div className="text-sm">{formatCurrency(rec.price)}</div>
-                            <div className="flex items-center text-xs">
-                              {renderRiskBadge(rec.riskLevel)}
-                              <span className="ml-2">{rec.timeFrame} term</span>
+                  <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+                    <TabsList className="grid w-full grid-cols-3">
+                      <TabsTrigger value="stocks">
+                        <LineChart size={14} className="mr-1" />
+                        Stocks
+                      </TabsTrigger>
+                      <TabsTrigger value="market">
+                        <PieChart size={14} className="mr-1" />
+                        Market
+                      </TabsTrigger>
+                      <TabsTrigger value="risk">
+                        <AlertCircle size={14} className="mr-1" />
+                        Risk
+                      </TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="stocks" className="mt-4 space-y-4">
+                      {recommendations.map((rec, index) => (
+                        <div key={index} className="border rounded-md p-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="font-medium">{rec.symbol}</div>
+                              <div className="text-xs text-muted-foreground">{rec.name}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm">{formatCurrency(rec.price)}</div>
+                              <div className="flex items-center text-xs">
+                                {renderRiskBadge(rec.riskLevel)}
+                                <span className="ml-2">{rec.timeFrame} term</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        
-                        <div className="mt-2 text-sm">
-                          <div className="flex justify-between">
-                            <span>Recommendation:</span>
-                            <span className={`font-medium ${
-                              rec.recommendation === 'buy' ? 'text-finance-green-600' : 
-                              rec.recommendation === 'sell' ? 'text-red-600' : 'text-yellow-600'
-                            }`}>
-                              {rec.recommendation.toUpperCase()}
-                            </span>
+                          
+                          <div className="mt-2 text-sm">
+                            <div className="flex justify-between">
+                              <span>Recommendation:</span>
+                              <span className={`font-medium ${
+                                rec.recommendation === 'buy' ? 'text-finance-green-600' : 
+                                rec.recommendation === 'sell' ? 'text-red-600' : 'text-yellow-600'
+                              }`}>
+                                {rec.recommendation.toUpperCase()}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span>Potential Return:</span>
+                              <span>{rec.potentialReturn.toFixed(2)}%</span>
+                            </div>
                           </div>
-                          <div className="flex justify-between">
-                            <span>Potential Return:</span>
-                            <span>{rec.potentialReturn.toFixed(2)}%</span>
+                          
+                          <div className="mt-2 text-xs text-muted-foreground">
+                            {rec.summary}
                           </div>
                         </div>
-                        
-                        <div className="mt-2 text-xs text-muted-foreground">
-                          {rec.summary}
-                        </div>
+                      ))}
+                    </TabsContent>
+                    
+                    <TabsContent value="market" className="mt-4">
+                      <div className="border rounded-md p-3">
+                        <h3 className="text-sm font-medium mb-2">Market Outlook</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {analysisData?.marketOutlook && analysisData.marketOutlook !== "Market outlook unavailable" 
+                            ? analysisData.marketOutlook 
+                            : "No market outlook data available."}
+                        </p>
                       </div>
-                    ))}
-                  </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="risk" className="mt-4">
+                      <div className="border rounded-md p-3">
+                        <h3 className="text-sm font-medium mb-2">Risk Assessment</h3>
+                        <p className="text-sm text-muted-foreground">
+                          {analysisData?.riskAssessment && analysisData.riskAssessment !== "Risk assessment unavailable" 
+                            ? analysisData.riskAssessment 
+                            : "No risk assessment data available."}
+                        </p>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                  
+                  <Alert className="mt-3">
+                    <AlertTriangle className="h-4 w-4" />
+                    <AlertDescription className="text-xs">
+                      This is not financial advice. Past performance is not indicative of future results.
+                    </AlertDescription>
+                  </Alert>
                 </CardContent>
               </Card>
               
               {recommendations.length > 0 && (
+                <RealTimeStockData symbol={recommendations[0].symbol} refreshInterval={60000} />
+              )}
+              
+              {recommendations.length > 0 && (
                 <StockChart 
-                  data={generateMockChartData(recommendations[0].symbol, 30)}
                   symbol={recommendations[0].symbol}
+                  defaultProvider="alphavantage"
                   color="#3E92CC"
                 />
               )}

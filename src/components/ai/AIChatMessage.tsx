@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Avatar } from '@/components/ui/avatar';
 
@@ -16,6 +15,46 @@ interface AIChatMessageProps {
 export function AIChatMessage({ message }: AIChatMessageProps) {
   const isUser = message.sender === 'user';
   
+  // Function to format AI response for rendering
+  const formatAIMessage = (content: string) => {
+    if (isUser) return <p className="text-sm">{content}</p>;
+    
+    // Split the content by double asterisks to identify headings
+    const parts = content.split(/\*\*(.*?)\*\*/g);
+    
+    return (
+      <div className="prose prose-sm max-w-none dark:prose-invert">
+        {parts.map((part, index) => {
+          // Every odd index contains text between double asterisks (headings)
+          if (index % 2 === 1) {
+            return <h3 key={index} className="font-bold text-base mt-3 mb-1">{part}</h3>;
+          }
+          
+          // Process regular content with paragraph breaks
+          if (part.trim()) {
+            return (
+              <React.Fragment key={index}>
+                {part.split('\n\n').map((paragraph, pIndex) => (
+                  <React.Fragment key={`p-${pIndex}`}>
+                    {paragraph.split('\n').map((line, lIndex) => (
+                      <React.Fragment key={`l-${lIndex}`}>
+                        {line}
+                        {lIndex < paragraph.split('\n').length - 1 && <br />}
+                      </React.Fragment>
+                    ))}
+                    {pIndex < part.split('\n\n').length - 1 && <p className="my-2"></p>}
+                  </React.Fragment>
+                ))}
+              </React.Fragment>
+            );
+          }
+          
+          return null;
+        })}
+      </div>
+    );
+  };
+  
   return (
     <div className={`flex ${isUser ? 'justify-end' : 'justify-start'} mb-4`}>
       {!isUser && (
@@ -31,7 +70,7 @@ export function AIChatMessage({ message }: AIChatMessageProps) {
             : 'bg-muted border border-border'
         }`}
       >
-        <p className="text-sm">{message.content}</p>
+        {formatAIMessage(message.content)}
         <div className={`text-xs mt-1 ${isUser ? 'text-blue-100' : 'text-muted-foreground'}`}>
           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </div>

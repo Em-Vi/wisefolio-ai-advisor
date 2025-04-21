@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
@@ -23,16 +22,6 @@ const menuItems = [
         <rect width="7" height="5" x="14" y="3" rx="1" />
         <rect width="7" height="9" x="14" y="12" rx="1" />
         <rect width="7" height="5" x="3" y="16" rx="1" />
-      </svg>
-    ),
-  },
-  {
-    title: 'Market Dashboard',
-    path: '/market-dashboard',
-    icon: (
-      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M3 3v18h18" />
-        <path d="m19 9-5 5-4-4-3 3" />
       </svg>
     ),
   },
@@ -90,17 +79,9 @@ export function AppSidebar() {
       <SidebarContent>
         <div className="py-4 px-3 flex items-center">
           <div className="w-8 h-8 rounded bg-finance-blue-700 flex items-center justify-center mr-2">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <circle cx="9" cy="7" r="4" />
-              <circle cx="19" cy="11" r="2" />
-              <path d="M19 8v1" />
-              <path d="M19 13v1" />
-              <path d="M16 11h1" />
-              <path d="M21 11h1" />
-            </svg>
+            <img src="/wisefolio.png" alt="Wisefolio Logo" className="w-6 h-6" />
           </div>
-          <span className="text-lg font-semibold">WisePortfolio</span>
+          <span className="text-lg font-semibold">Wisefolio</span>
         </div>
         <SidebarGroup>
           <SidebarGroupLabel>Analytics</SidebarGroupLabel>

@@ -1,136 +1,173 @@
-
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/lib/toast';
-import { useAuth } from '@/hooks/useAuth';
+import { JournalEntry } from '@/data/mockStockData';
 
-export interface JournalEntry {
+// Type for journal entries stored in Supabase
+export interface SupabaseJournalEntry {
   id: string;
-  title: string;
-  content: string;
-  stocks: string[];
-  sentiment: 'bullish' | 'bearish' | 'neutral';
   created_at: string;
-  updated_at: string;
-  ai_feedback: string | null;
-  user_id: string;
-}
-
-interface CreateJournalEntryPayload {
   title: string;
   content: string;
   stocks: string[];
   sentiment: 'bullish' | 'bearish' | 'neutral';
+  user_id: string;
+  ai_feedback?: string;
 }
 
-export const useJournalEntries = () => {
+// Create JournalEntry type without id/date for creation
+export type CreateJournalEntryInput = Omit<JournalEntry, 'id' | 'date'>;
+
+// Convert Supabase journal entry to our application format
+const mapSupabaseEntryToJournalEntry = (entry: SupabaseJournalEntry): JournalEntry => {
+  return {
+    id: entry.id,
+    date: entry.created_at,
+    title: entry.title,
+    content: entry.content,
+    stocks: entry.stocks || [],
+    sentiment: entry.sentiment || 'neutral',
+    aiFeedback: entry.ai_feedback,
+    cognitivebiases: [] // Initialize as empty array since column might not exist
+  };
+};
+
+export const useJournalEntries = (userId: string | null) => {
+  // Query for fetching journal entries
+  const getJournalEntriesQuery = useQuery({
+    queryKey: ['journalEntries', userId],
+    queryFn: async (): Promise<JournalEntry[]> => {
+      if (!userId) return [];
+
+      const { data, error } = await supabase
+        .from('journal_entries')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        toast.error(`Error fetching journal entries: ${error.message}`);
+        throw error;
+      }
+
+      return (data || []).map(mapSupabaseEntryToJournalEntry);
+    },
+    enabled: !!userId,
+  });
+
   const queryClient = useQueryClient();
-  const { user } = useAuth();
 
-  const fetchJournalEntries = async (): Promise<JournalEntry[]> => {
-    if (!user) throw new Error("User must be authenticated");
-    
-    const { data, error } = await supabase
-      .from('journal_entries')
-      .select('*')
-      .order('created_at', { ascending: false });
+  // Mutation for creating a new journal entry
+  const createJournalEntryMutation = useMutation({
+    mutationFn: async ({ title, content, stocks, sentiment }: CreateJournalEntryInput): Promise<JournalEntry> => {
+      if (!userId) {
+        throw new Error('User must be logged in to create journal entries');
+      }
 
-    if (error) {
-      toast.error(`Error fetching journal entries: ${error.message}`);
-      throw error;
-    }
+      // First save the journal entry to Supabase
+      const { data: entryData, error: entryError } = await supabase
+        .from('journal_entries')
+        .insert({
+          title,
+          content,
+          stocks,
+          sentiment,
+          user_id: userId
+        })
+        .select('*')
+        .single();
 
-    return data as JournalEntry[];
-  };
+      if (entryError) {
+        toast.error(`Error creating journal entry: ${entryError.message}`);
+        throw entryError;
+      }
 
-  const createJournalEntry = async (entry: CreateJournalEntryPayload): Promise<JournalEntry> => {
-    if (!user) throw new Error("User must be authenticated");
-    
-    const { data, error } = await supabase
-      .from('journal_entries')
-      .insert([{ ...entry, user_id: user.id }])
-      .select()
-      .single();
+      // Get AI feedback for the entry
+      try {
+        const { data: feedbackData, error: feedbackError } = await supabase.functions.invoke('journal-ai-feedback', {
+          body: {
+            journalContent: content,
+            sentiment,
+            stocks
+          }
+        });
 
-    if (error) {
-      toast.error(`Error creating journal entry: ${error.message}`);
-      throw error;
-    }
+        if (feedbackError) {
+          console.error('Error getting AI feedback:', feedbackError);
+        } else if (feedbackData) {
+          // Update the entry with AI feedback only
+          const { error: updateError } = await supabase
+            .from('journal_entries')
+            .update({
+              ai_feedback: feedbackData.aiFeedback
+            })
+            .eq('id', entryData.id);
 
-    toast.success('Journal entry created successfully');
-    return data as JournalEntry;
-  };
+          if (updateError) {
+            console.error('Error saving AI feedback:', updateError);
+          } else {
+            // Update the entry data with the feedback
+            entryData.ai_feedback = feedbackData.aiFeedback;
+            
+            // Create a mapped entry with feedback
+            const mappedEntry = mapSupabaseEntryToJournalEntry(entryData);
+            mappedEntry.cognitivebiases = feedbackData.biases || [];
+            return mappedEntry;
+          }
+        }
+      } catch (feedbackErr) {
+        console.error('Error invoking AI feedback function:', feedbackErr);
+      }
 
-  const updateJournalEntry = async (
-    id: string, 
-    updates: Partial<CreateJournalEntryPayload>
-  ): Promise<JournalEntry> => {
-    if (!user) throw new Error("User must be authenticated");
-    
-    const { data, error } = await supabase
-      .from('journal_entries')
-      .update(updates)
-      .eq('id', id)
-      .select()
-      .single();
-
-    if (error) {
-      toast.error(`Error updating journal entry: ${error.message}`);
-      throw error;
-    }
-
-    toast.success('Journal entry updated successfully');
-    return data as JournalEntry;
-  };
-
-  const deleteJournalEntry = async (id: string): Promise<void> => {
-    if (!user) throw new Error("User must be authenticated");
-    
-    const { error } = await supabase
-      .from('journal_entries')
-      .delete()
-      .eq('id', id);
-
-    if (error) {
-      toast.error(`Error deleting journal entry: ${error.message}`);
-      throw error;
-    }
-
-    toast.success('Journal entry deleted successfully');
-  };
-
-  const entriesQuery = useQuery({
-    queryKey: ['journalEntries'],
-    queryFn: fetchJournalEntries,
-    enabled: !!user,
-  });
-
-  const createMutation = useMutation({
-    mutationFn: createJournalEntry,
+      const mappedEntry = mapSupabaseEntryToJournalEntry(entryData);
+      return mappedEntry;
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['journalEntries'] });
+      // Invalidate the journal entries query to refetch data
+      queryClient.invalidateQueries({ queryKey: ['journalEntries', userId] });
+      toast.success('Journal entry created successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to create journal entry: ${error.message}`);
     },
   });
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, updates }: { id: string; updates: Partial<CreateJournalEntryPayload> }) => 
-      updateJournalEntry(id, updates),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['journalEntries'] });
-    },
-  });
+  // Mutation for deleting a journal entry
+  const deleteJournalEntryMutation = useMutation({
+    mutationFn: async (entryId: string): Promise<void> => {
+      if (!userId) {
+        throw new Error('User must be logged in to delete journal entries');
+      }
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteJournalEntry,
+      const { error } = await supabase
+        .from('journal_entries')
+        .delete()
+        .eq('id', entryId)
+        .eq('user_id', userId);
+
+      if (error) {
+        toast.error(`Error deleting journal entry: ${error.message}`);
+        throw error;
+      }
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['journalEntries'] });
+      // Invalidate the journal entries query to refetch data
+      queryClient.invalidateQueries({ queryKey: ['journalEntries', userId] });
+      toast.success('Journal entry deleted successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(`Failed to delete journal entry: ${error.message}`);
     },
   });
 
   return {
-    entriesQuery,
-    createMutation,
-    updateMutation,
-    deleteMutation,
+    journalEntries: getJournalEntriesQuery.data || [],
+    isLoading: getJournalEntriesQuery.isLoading,
+    isError: getJournalEntriesQuery.isError,
+    error: getJournalEntriesQuery.error,
+    createJournalEntry: createJournalEntryMutation.mutateAsync,
+    isCreating: createJournalEntryMutation.isPending,
+    deleteJournalEntry: deleteJournalEntryMutation.mutateAsync,
+    isDeleting: deleteJournalEntryMutation.isPending,
   };
 };

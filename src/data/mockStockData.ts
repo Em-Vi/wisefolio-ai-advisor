@@ -35,6 +35,7 @@ export interface JournalEntry {
   stocks: string[];
   sentiment: 'bullish' | 'bearish' | 'neutral';
   aiFeedback?: string;
+  cognitivebiases?: Array<{name: string, description: string}>;
 }
 
 export interface PortfolioStock {

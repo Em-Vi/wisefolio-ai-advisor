@@ -72,7 +72,7 @@ export const AuthForm = () => {
             <TabsTrigger value="signup">Sign Up</TabsTrigger>
           </TabsList>
           <CardDescription className="pt-2 text-center">
-            Manage your investments with WisePortfolio
+            Manage your investments with Wisefolio
           </CardDescription>
         </CardHeader>
         
