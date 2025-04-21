@@ -240,8 +240,8 @@ const StockAnalyzer = () => {
                   id="investment-amount"
                   value={[investmentAmount]}
                   min={1000}
-                  max={100000}
-                  step={1000}
+                  max={1000000}
+                  step={10000}
                   onValueChange={(value) => setInvestmentAmount(value[0])}
                   className="mt-2"
                 />

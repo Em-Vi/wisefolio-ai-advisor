@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { PortfolioCard } from '@/components/simulator/PortfolioCard';
 import { Button } from '@/components/ui/button';
@@ -347,8 +346,8 @@ const PortfolioSimulator = () => {
                     id="monthly-contribution"
                     value={[monthlyContribution]}
                     min={0}
-                    max={5000}
-                    step={100}
+                    max={50000}
+                    step={1000}
                     onValueChange={(value) => setMonthlyContribution(value[0])}
                   />
                 </div>
