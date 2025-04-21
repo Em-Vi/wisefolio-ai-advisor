@@ -1,73 +1,83 @@
-# Welcome to your Lovable project
 
-## Project info
 
-**URL**: https://lovable.dev/projects/f43c5f4a-603b-41d7-a2f4-e615ce6ad30e
+---
 
-## How can I edit this code?
+# AI Stock Analyzer
 
-There are several ways of editing your application.
+An AI-powered web app that helps users make smarter investment decisions with real-time stock data, financial news, sentiment analysis, and a Gemini-powered financial advisor chatbot.
 
-**Use Lovable**
+---
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/f43c5f4a-603b-41d7-a2f4-e615ce6ad30e) and start prompting.
+## Features
 
-Changes made via Lovable will be committed automatically to this repo.
+- **Live Stock Feed** – Real-time data for selected stocks
+- **Financial News** – Latest updates on stock-related events
+- **AI Financial Advisor** – Chatbot powered by Gemini AI for smart investment tips
+- **Stock Analyzer** – Personalized suggestions based on:
+  - Selected stocks
+  - Investment amount
+  - Risk preference
+- **Bonus Feature** – Added by the AI agent
 
-**Use your preferred IDE**
+---
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+## Tech Stack
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+- **Frontend**: React.js
+- **Backend**: Supabase (Database + Auth)
+- **AI Integration**: Google Gemini API
+- **Stock Data Source**: [Finnhub.io](https://finnhub.io/)
+- **Charting**: Chart.js / ApexCharts
 
-Follow these steps:
+---
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+## Getting Started
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+1. **Clone the Repo**
+   ```bash
+   git clone https://github.com/your-username/ai-stock-analyzer.git
+   cd ai-stock-analyzer
 
-# Step 3: Install the necessary dependencies.
-npm i
+2. Install Dependencies
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
+npm install
+
+
+3. Add Environment Variables Create a .env file and add:
+
+VITE_FINNHUB_API_KEY=your_finnhub_api_key
+VITE_GEMINI_API_KEY=your_gemini_api_key
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_ANON_KEY=your_supabase_anon_key
+
+
+4. Run Locally
+
 npm run dev
-```
 
-**Edit a file directly in GitHub**
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
 
-**Use GitHub Codespaces**
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+---
 
-## What technologies are used for this project?
+API Endpoints Used (Finnhub)
 
-This project is built with:
+/quote – Real-time stock prices
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+/news – Latest stock news
 
-## How can I deploy this project?
+/metric – Key financial metrics
 
-Simply open [Lovable](https://lovable.dev/projects/f43c5f4a-603b-41d7-a2f4-e615ce6ad30e) and click on Share -> Publish.
+/news-sentiment – Sentiment analysis of stock news
 
-## Can I connect a custom domain to my Lovable project?
 
-Yes it is!
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+---
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+License
+
+This project is for personal, educational, and experimental use.
+
+---
+
+
